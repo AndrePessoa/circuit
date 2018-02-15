@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1024, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+
+    <style type="text/css">
+        body{
+            background-color: rgb(56, 80, 80);
+        }
+    </style>
+</head>
+<body>
+    
+<script>
+    'use strict';
+
+    // requestanimation polyfill
+    (function () {
+        var lastTime = 0;
+        var vendors = ['webkit', 'moz'];
+        for (var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
+            window.requestAnimationFrame = window[vendors[x] + 'RequestAnimationFrame'];
+            window.cancelAnimationFrame = window[vendors[x] + 'CancelAnimationFrame'] || window[vendors[x] + 'CancelRequestAnimationFrame'];
+        }
+
+        if (!window.requestAnimationFrame) window.requestAnimationFrame = function (callback, element) {
+            var currTime = new Date().getTime();
+            var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+            var id = window.setTimeout(function () {
+                callback(currTime + timeToCall);
+            },
+            timeToCall);
+            lastTime = currTime + timeToCall;
+            return id;
+        };
+
+        if (!window.cancelAnimationFrame) window.cancelAnimationFrame = function (id) {
+            clearTimeout(id);
+        };
+    }());
+
+    // Math sing polyfill
+    if (!Math.sign) {
+        Math.sign = function(x) {
+            return ((x > 0) - (x < 0)) || +x;
+        };
+    }
+
+    // setup stuff.
+    var canvas = document.createElement("canvas"),
+        ctx = canvas.getContext("2d"),
+        width = 600,
+        height = 600,
+        settings = {
+            background: "#0D4D2B",
+            traceColor: "#bcbec0",
+            traceFill: "#385050",
+            startTraces : 20,
+            redraw: function () {
+                reinit();
+            },
+            standard: {
+                background: "#0D4D2B",
+                traceColor: "#bcbec0",
+                traceFill: "#385050"
+            },
+            green2: {
+                background: "#0d4d2b",
+                traceColor: "#bcbec0",
+                traceFill: "#385050"
+            },
+            blackwhite: {
+                background: "#fff",
+                traceColor: "#bcbec0",
+                traceFill: "#385050"
+            },
+            blue: {
+                background: "#011880",
+                traceColor: "#bcbec0",
+                traceFill: "#385050"
+            },
+            colorScheme: 0
+        };
+
+    canvas.width = width;
+    canvas.height = height;
+    document.body.appendChild(canvas);
+
+    function Trace(settings) {
+        console.log( settings );
+        settings = settings || {};
+        this.x = settings.x || Math.ceil((Math.random() * width) / 8) * 8;
+        this.y = settings.y || Math.ceil((Math.random() * height) / 8) * 8;
+
+        this.points = [];
+        this.points.push({
+            x: this.x,
+            y: this.y,
+            arc: 0
+        });
+
+        this.trapCount = 0;
+        this.live = true;
+
+        this.lastPoint = this.points[0];
+
+        this.angle = settings.angle != undefined ? settings.angle : (Math.ceil((Math.random() * 360) / 45) * 45) * (Math.PI / 180);
+        this.speed = 8;
+        this.life = 0;
+        this.changeDelay = 0;
+    }
+
+    Trace.prototype.update = function () {
+        if( !this.live ) return;
+
+        var x = this.lastPoint.x,
+            y = this.lastPoint.y,
+            dx = this.x - x,
+            dy = this.y - y;
+
+        this.life += 1;
+
+        // if its greater than .01 keep moving
+        if ( Math.random() < 0.9 && Math.random() > this.life / 100 ) {
+            this.changeDelay++;
+
+            var velX = Math.sign( Math.round( Math.sin(this.angle) * 10 ) / 10 ) * this.speed,
+                velY = Math.sign( Math.round( Math.cos(this.angle) * 10 ) / 10 ) * this.speed,
+                checkPointNearX = this.x + velX,
+                checkPointNearY = this.y + velY,
+                checkPointFarX = this.x + velX * 2,
+                checkPointFarY = this.y + velY * 2,
+                imageDataNear = ctx.getImageData(checkPointNearX, checkPointNearY,  this.speed / 4,  this.speed / 4 ).data,
+                imageDataFar  = ctx.getImageData(checkPointFarX, checkPointFarY, this.speed, this.speed).data,
+                pxlData = (new Uint8ClampedArray( imageDataNear.length + imageDataFar.length )),
+                collision = false;
+
+            pxlData.set( imageDataNear );
+            pxlData.set( imageDataFar, imageDataNear.length );
+
+            // check if its in bounds.
+            if (checkPointFarX > 0 && checkPointFarX < width && checkPointFarY > 0 && checkPointFarY < height) {
+                // check if the point in front is clear or not.
+                for (var i = 0, n = pxlData.length; i < n; i += 4) {
+                    var alpha = pxlData[i + 3];
+
+                    if (alpha !== 0) {
+                        collision = true;
+                        break;
+                    }
+                }
+            } else {
+                collision = true;
+            }
+
+            // no collision keep moving
+            if (!collision) {
+                this.trapCount = 0;
+                this.x += velX;
+                this.y += velY;
+            } else {
+                this.changeDelay = 0;
+                // collision, assume its not the end
+                this.trapCount++;
+                this.angle -= 45 * (Math.PI / 180);
+
+                // line is fully trapped make sure to draw an arc and start a new trace.            
+                if (this.trapCount >= 7) {
+                    this.live = false;
+                }
+
+                if (Math.sqrt(dx * dx + dy * dy) > 4) {
+                    this.points.push({
+                        x: this.x,
+                        y: this.y
+                    });
+                    this.lastPoint = this.points[this.points.length - 1];
+                } else {
+                    this.trapCount++;
+                    this.x = this.lastPoint.x;
+                    this.y = this.lastPoint.y;
+                }
+            }
+        } else {
+            this.changeDelay = 0;
+
+            // small chance we might just stop altogether.
+            if (Math.random() > 0.9) {
+                this.live = false;
+            }
+
+            // no collision clear any prev trap checks, change the direction and continue on.
+            this.trapCount = 0;
+            this.angle += 45 * (Math.PI / 180);
+
+            if (Math.sqrt(dx * dx + dy * dy) > 4) {
+                this.points.push({
+                    x: this.x,
+                    y: this.y
+                });
+                this.lastPoint = this.points[this.points.length - 1];
+            } else {
+                this.x = this.lastPoint.x;
+                this.y = this.lastPoint.y;
+            }
+        }
+
+    };
+
+    Trace.prototype.render = function () {
+        ctx.beginPath();
+        ctx.moveTo(this.points[0].x, this.points[0].y);
+
+        for (var p = 1, plen = this.points.length; p < plen; p++) {
+            ctx.lineTo(this.points[p].x, this.points[p].y);
+        }
+        ctx.lineTo(this.x, this.y);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(this.points[0].x, this.points[0].y, 4, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        if (!this.live) {
+            ctx.beginPath();
+            ctx.arc(this.points[plen - 1].x, this.points[plen - 1].y, 4, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+    };
+
+    // init
+    var traces = [],
+        traceNum = settings.startTraces,
+        reqAnimFrameInstance = null;
+
+    function reinit() {
+        cancelAnimationFrame(reqAnimFrameInstance);
+        traces = [];
+        traceNum = settings.startTraces;
+        ctx.clearRect(0, 0, width, height);
+
+        for (var b = 0; b < traceNum; b++) {
+            traces.push(new Trace({
+                cX: 0,
+                cY: 0
+            }));
+        }
+        doTrace();
+    }
+
+    ctx.strokeStyle = "#bcbec0";
+    ctx.fillStyle = "#385050";
+    ctx.lineWidth = 2;
+
+    var InitCircle = {
+        x: 0,
+        y: 0,
+        radius: 40,
+        init: function(){
+            this.x = Math.round(( width / 2 ) / 8 ) * 8;
+            this.y = Math.round(( height / 2 ) / 8 ) * 8;
+
+            var outterRadius = this.radius + 10;
+            var incAng = 360 * (Math.PI / 180) / traceNum;
+            for (var b = 0; b < traceNum; b++) {
+                var bolinhaAng = incAng * b;
+                var vectorAng = Math.round(( bolinhaAng ) / ( Math.PI / 4 ) ) * ( Math.PI / 4 );
+                console.log( ( bolinhaAng / Math.PI * 180 ), ( vectorAng / Math.PI * 180 ) );
+
+                traces.push(new Trace({
+                    x: Math.round( ( this.x + ( Math.sin( bolinhaAng ) * outterRadius ) ) / 8 ) * 8,
+                    y: Math.round( ( this.y + ( Math.cos( bolinhaAng ) * outterRadius ) ) / 8 ) * 8,
+                    angle: ( vectorAng )
+                }));
+            }
+        },
+        draw: function(){
+           /* ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();*/
+        }
+    }
+    InitCircle.init();
+
+    function doGrid() {
+        ctx.save();
+        ctx.strokeStyle = "#ffe99b";
+        ctx.fillStyle = "#ccc";
+        ctx.lineWidth = 1;
+
+        for( var x = 0; x < width; x += 8 ){
+            for( var y = 0; y < height; y += 8 ){
+                ctx.fillRect(x,y,1,1);
+            }
+        }
+        ctx.restore();
+    }
+
+    function doTrace() {
+        ctx.clearRect(0, 0, width, height);
+        InitCircle.draw();
+
+        for (var b = 0; b < traces.length; b++) {
+            traces[b].render();
+        }
+
+        for (b = 0; b < traces.length; b++) {
+            if (traces[b].live) {
+                traces[b].update();
+            }
+        }
+        doGrid();
+
+        reqAnimFrameInstance = requestAnimationFrame(doTrace);
+        //debugger;
+    }
+
+    doTrace();
+</script>
+</body>
+</html>
