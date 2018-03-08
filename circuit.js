@@ -43,7 +43,7 @@ var createCircuit = function(){
             background: "#0D4D2B",
             traceColor: "#bcbec0",
             traceFill: "#385050",
-            startTraces : 8,
+            startTraces : 20,
             redraw: function () {
                 reinit();
             },
@@ -86,8 +86,9 @@ var createCircuit = function(){
         toScale( value ){
             return Math.floor( value / this.scale );
         },
-        getCell: function(x, y){
+        getCell: function(x, y, mark){
             var cellIndex = this.toScale(x) + this.toScale(y) * this._width;
+            if( mark !== undefined && this.cells[ cellIndex ] ) this.cells[ cellIndex ] = "!";
             return this.cells[ cellIndex ];
         },
         setCell: function(x, y, value){
@@ -168,7 +169,12 @@ var createCircuit = function(){
 
         // check if its in bounds.
         if (checkPointFarX > 0 && checkPointFarX < width && checkPointFarY > 0 && checkPointFarY < height) {
-            if( grid.getCell( checkPointNearX, checkPointNearY ) !== undefined || grid.getCell( checkPointFarX, checkPointFarY ) !== undefined ){
+            var deg = ( this.angle * 180 / Math.PI );
+            if( deg == 225 && ( grid.getCell( this.x - velX, this.y, true ) || grid.getCell( this.x, this.y - velY, true ) ) ) return false;
+            if( deg ==  45 && ( grid.getCell( this.x + velX, this.y, true ) || grid.getCell( this.x, this.y + velY, true ) ) ) return false;
+            if( deg == 135 && ( grid.getCell( this.x + velX, this.y, true ) || grid.getCell( this.x, this.y - velY, true ) ) ) return false;
+            if( deg == 315 && ( grid.getCell( this.x - velX, this.y, true ) || grid.getCell( this.x, this.y + velY, true ) ) ) return false;
+            if( grid.getCell( checkPointNearX, checkPointNearY, true ) !== undefined ){
                 return false;
             }
         } else {
@@ -211,7 +217,7 @@ var createCircuit = function(){
 
 
         // no collision keep moving
-        if (this.live && Math.random() > this.life / 1000 ) {
+        if (this.live && Math.random() > this.life / 500 ) {
             this.changeDelay++;
             this.x = nextPoint.x;
             this.y = nextPoint.y;
@@ -313,14 +319,15 @@ var createCircuit = function(){
             this.addToGrid();
         },
         addToGrid: function(){
-            var bX = this.x - this.radius;
-            var bY = this.y - this.radius;
-            for (var i = 0; i < this.radius * 2; ( i += this.step )) {
-                for (var j = 0; j < this.radius * 2; ( j += this.step )) {
-                    var vert = i - this.radius;
-                    var horz = j - this.radius;
+            var radius = this.radius + this.step * 2;
+            var bX = this.x - radius;
+            var bY = this.y - radius;
+            for (var i = 0; i < radius * 2; ( i += this.step )) {
+                for (var j = 0; j < radius * 2; ( j += this.step )) {
+                    var vert = i - radius;
+                    var horz = j - radius;
                     var dist = Math.sqrt( vert * vert + horz * horz );
-                    if( dist < this.radius ) grid.setCell( bX + j, bY + i, "#" );                    
+                    if( dist < radius ) grid.setCell( bX + j, bY + i, "#" );                    
                 }
             }
         },
@@ -342,7 +349,21 @@ var createCircuit = function(){
 
         for( var x = 0; x < width; x += 8 ){
             for( var y = 0; y < height; y += 8 ){
-                ctx.fillRect(x,y,1,1);
+                switch( grid.getCell( x, y ) ){
+                    case "#":
+                        ctx.strokeStyle = "#ffe99b";
+                        ctx.fillStyle = "#ccc";
+                    break;
+                    case "!":                    
+                        ctx.strokeStyle = "#ff0000";
+                        ctx.fillStyle = "#ff0000";
+                    break;
+                    default:
+                        ctx.strokeStyle = "#ffe99b";
+                        ctx.fillStyle = "#ccc";
+                }
+                ctx.fillRect(x,y,2,2);
+
             }
         }
         ctx.restore();
@@ -361,10 +382,10 @@ var createCircuit = function(){
                 traces[b].update();
             }
         }
+        //debugger;
         doGrid();
 
         reqAnimFrameInstance = requestAnimationFrame(doTrace);
-        //debugger;
     }
 
     doTrace();
