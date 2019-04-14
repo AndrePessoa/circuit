@@ -2,6 +2,7 @@
 
 var createCircuit = function(){
 
+    
     // requestanimation polyfill
     (function () {
         var lastTime = 0;
@@ -37,8 +38,8 @@ var createCircuit = function(){
     // setup stuff.
     var canvas = document.createElement("canvas"),
         ctx = canvas.getContext("2d"),
-        width = 600,
-        height = 600,
+        width = window.innerWidth,
+        height = window.innerHeight,
         settings = {
             background: "#0D4D2B",
             traceColor: "#bcbec0",
@@ -69,6 +70,7 @@ var createCircuit = function(){
             },
             colorScheme: 0
         };
+    
 
     canvas.width = width;
     canvas.height = height;
@@ -81,10 +83,10 @@ var createCircuit = function(){
         create: function(width, height, scale){
             this._width = (width/scale) - 1;
             this.scale = scale;
-            this.cells = new Array( height/scale * width/scale );
+            this.cells = new Array( Math.ceil( height/scale * width/scale ) );
         },
         toScale( value ){
-            return Math.floor( value / this.scale );
+            return Math.round( value / this.scale );
         },
         getCell: function(x, y, mark){
             var cellIndex = this.toScale(x) + this.toScale(y) * this._width;
@@ -126,7 +128,7 @@ var createCircuit = function(){
                 var y = l / this._width;
                 var line = "";
                 for (let x = 0; x < this._width; x++) {
-                    line += this.getCell( x*this.scale, y*this.scale ) == "#" ? "[]" : "..";                    
+                    line += this.getCell( x*this.scale, y*this.scale ) == "#" ? "||" : "..";                    
                 }
                 console.log(line);
             }
@@ -136,7 +138,6 @@ var createCircuit = function(){
     window.grid = grid;
 
     function Trace(settings) {
-        console.log( settings );
         settings = settings || {};
         this.id = settings.id || "trace" + Math.floor( Math.random() * 10000 );
         this.x = settings.x || Math.ceil((Math.random() * width) / 8) * 8;
@@ -159,9 +160,10 @@ var createCircuit = function(){
         this.life = 0;
         this.changeDelay = 0;
     };
-    Trace.prototype.checkNextPoint = function(){
-        var velX = Math.sign( Math.round( Math.sin(this.angle) * 10 ) / 10 ) * this.speed,
-            velY = Math.sign( Math.round( Math.cos(this.angle) * 10 ) / 10 ) * this.speed,
+    Trace.prototype.checkNextPoint = function(ang){
+        var angle = this.angle + ( ang || 0 ),
+            velX = Math.sign( Math.round( Math.sin(angle) * 10 ) / 10 ) * this.speed,
+            velY = Math.sign( Math.round( Math.cos(angle) * 10 ) / 10 ) * this.speed,
             checkPointNearX = this.x + velX,
             checkPointNearY = this.y + velY,
             checkPointFarX = this.x + velX * 2,
@@ -169,11 +171,13 @@ var createCircuit = function(){
 
         // check if its in bounds.
         if (checkPointFarX > 0 && checkPointFarX < width && checkPointFarY > 0 && checkPointFarY < height) {
-            var deg = ( this.angle * 180 / Math.PI );
-            if( deg == 225 && ( grid.getCell( this.x - velX, this.y, true ) || grid.getCell( this.x, this.y - velY, true ) ) ) return false;
-            if( deg ==  45 && ( grid.getCell( this.x + velX, this.y, true ) || grid.getCell( this.x, this.y + velY, true ) ) ) return false;
-            if( deg == 135 && ( grid.getCell( this.x + velX, this.y, true ) || grid.getCell( this.x, this.y - velY, true ) ) ) return false;
-            if( deg == 315 && ( grid.getCell( this.x - velX, this.y, true ) || grid.getCell( this.x, this.y + velY, true ) ) ) return false;
+            var deg = Math.round( this.angle * 180 / Math.PI ) % 360;
+            deg = deg < 0 ? deg + 360 : deg ;
+
+            if( deg === 225 && ( grid.getCell( this.x + velX, this.y, true ) || grid.getCell( this.x, this.y + velY, true ) ) ) return false;
+            if( deg ===  45 && ( grid.getCell( this.x + velX, this.y, true ) || grid.getCell( this.x, this.y + velY, true ) ) ) return false;
+            if( deg === 135 && ( grid.getCell( this.x + velX, this.y, true ) || grid.getCell( this.x, this.y + velY, true ) ) ) return false;
+            if( deg === 315 && ( grid.getCell( this.x + velX, this.y, true ) || grid.getCell( this.x, this.y + velY, true ) ) ) return false;
             if( grid.getCell( checkPointNearX, checkPointNearY, true ) !== undefined ){
                 return false;
             }
@@ -196,28 +200,46 @@ var createCircuit = function(){
 
         this.life += 1;
 
-        // if its greater than .01 keep moving
-
-        var collision = false,
-            forced = false;
-        this.changeDelay++;
-
         //force curve
-        if( this.changeDelay > 2 && Math.random() < 0.1 ){               
-            this.angle += 45 * (Math.PI / 180);
+        if( this.changeDelay > 2 && Math.random() < 0.1 ){
+            this.changeDelay = 0;            
+            var direction =  Math.random() > .5 ? 1 : -1 ;
+            this.angle += 45 * (Math.PI / 180) * direction; 
+            grid.setCell( this.x, this.y, ";" );
         }
+        var nextPoint = this.checkNextPoint();
+        var initDeg = this.angle;
 
-        var trap = -1;
-        var nextPoint;
-        while( ( nextPoint = this.checkNextPoint() ) == false && trap < 8 ){
-            this.angle += 45 * (Math.PI / 180);
-            trap++;
-        };
-        this.live = trap < 7;
+        if( !nextPoint ){
+            //grid.setCell( this.x, this.y, "?" );
+            this.angle = initDeg + 45 * (Math.PI / 180);
+            nextPoint = this.checkNextPoint()
+            if( !nextPoint ){ 
+                this.angle = initDeg - 45 * (Math.PI / 180);
+                nextPoint = this.checkNextPoint()
+            }
+            if( !nextPoint ){ 
+                this.angle = initDeg + 90 * (Math.PI / 180);
+                nextPoint = this.checkNextPoint()
+            }
+            if( !nextPoint ){ 
+                this.angle = initDeg - 90 * (Math.PI / 180);
+                nextPoint = this.checkNextPoint()
+            }
+            if( !nextPoint ){ 
+                this.angle = initDeg + 135 * (Math.PI / 180);
+                nextPoint = this.checkNextPoint()
+            }
+            if( !nextPoint ){ 
+                this.angle = initDeg - 135 * (Math.PI / 180);
+                nextPoint = this.checkNextPoint()
+            }
+            if( !nextPoint ) this.live = false;
+        }
 
 
         // no collision keep moving
-        if (this.live && Math.random() > this.life / 500 ) {
+        if (this.live && Math.random() > this.life / 1000 ) {
             this.changeDelay++;
             this.x = nextPoint.x;
             this.y = nextPoint.y;
@@ -256,14 +278,14 @@ var createCircuit = function(){
         ctx.stroke();
 
         ctx.beginPath();
-        ctx.arc(this.points[0].x, this.points[0].y, 4, 0, Math.PI * 2);
+        ctx.arc(this.points[0].x+.5, this.points[0].y+.5, 4, 0, Math.PI * 2);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
 
         if (!this.live) {
             ctx.beginPath();
-            ctx.arc(this.points[plen - 1].x, this.points[plen - 1].y, 4, 0, Math.PI * 2);
+            ctx.arc(this.points[plen - 1].x+.5, this.points[plen - 1].y+.5, 4, 0, Math.PI * 2);
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
@@ -278,6 +300,8 @@ var createCircuit = function(){
 
     function reinit() {
         cancelAnimationFrame(reqAnimFrameInstance);
+        settings.startTraces += 5;
+        grid.create(width, height, 8);
         traces = [];
         traceNum = settings.startTraces;
         ctx.clearRect(0, 0, width, height);
@@ -293,7 +317,7 @@ var createCircuit = function(){
 
     ctx.strokeStyle = "#bcbec0";
     ctx.fillStyle = "#385050";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1;
 
     var InitCircle = {
         x: 0,
@@ -332,8 +356,8 @@ var createCircuit = function(){
             }
         },
         draw: function(){
-        /* ctx.beginPath();
-            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.beginPath();
+           /*  ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
             ctx.closePath();
             ctx.fill();
             ctx.stroke();*/
@@ -358,11 +382,19 @@ var createCircuit = function(){
                         ctx.strokeStyle = "#ff0000";
                         ctx.fillStyle = "#ff0000";
                     break;
+                    case "?":                    
+                        ctx.strokeStyle = "#0000ff";
+                        ctx.fillStyle = "#0000ff";
+                    break;
+                    case ";":                    
+                        ctx.strokeStyle = "#ff00ff";
+                        ctx.fillStyle = "#ff00ff";
+                    break;
                     default:
                         ctx.strokeStyle = "#ffe99b";
                         ctx.fillStyle = "#ccc";
                 }
-                ctx.fillRect(x,y,2,2);
+                ctx.fillRect(x-.5,y-.5,1,1);
 
             }
         }
@@ -372,6 +404,7 @@ var createCircuit = function(){
     function doTrace() {
         ctx.clearRect(0, 0, width, height);
         InitCircle.draw();
+        doGrid();
 
         for (var b = 0; b < traces.length; b++) {
             traces[b].render();
@@ -383,10 +416,11 @@ var createCircuit = function(){
             }
         }
         //debugger;
-        doGrid();
 
         reqAnimFrameInstance = requestAnimationFrame(doTrace);
     }
+
+    canvas.addEventListener("click", function(){ reinit() })
 
     doTrace();
 };
