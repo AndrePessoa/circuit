@@ -206,11 +206,13 @@ var createCircuit = function(){
             var direction =  Math.random() > .5 ? 1 : -1 ;
             this.angle += 45 * (Math.PI / 180) * direction; 
             grid.setCell( this.x, this.y, ";" );
+            this.life += 1;
         }
         var nextPoint = this.checkNextPoint();
         var initDeg = this.angle;
 
         if( !nextPoint ){
+            this.life += 1;
             //grid.setCell( this.x, this.y, "?" );
             this.angle = initDeg + 45 * (Math.PI / 180);
             nextPoint = this.checkNextPoint()
@@ -300,18 +302,22 @@ var createCircuit = function(){
 
     function reinit() {
         cancelAnimationFrame(reqAnimFrameInstance);
-        settings.startTraces += 5;
+        //settings.startTraces += 2;
+        //InitCircle.radius += 2;
         grid.create(width, height, 8);
         traces = [];
         traceNum = settings.startTraces;
         ctx.clearRect(0, 0, width, height);
 
+        InitCircle.init();
+
+        /*
         for (var b = 0; b < traceNum; b++) {
             traces.push(new Trace({
                 cX: 0,
                 cY: 0
             }));
-        }
+        }*/
         doTrace();
     };
 
