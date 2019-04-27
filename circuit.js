@@ -1,6 +1,6 @@
 'use strict';
 
-var createCircuit = function(){
+var createCircuit = function(settings){
 
     
     // requestanimation polyfill
@@ -40,336 +40,56 @@ var createCircuit = function(){
         ctx = canvas.getContext("2d"),
         width = window.innerWidth,
         height = window.innerHeight,
-        settings = {
-            background: "#0D4D2B",
-            traceColor: "#bcbec0",
-            traceFill: "#385050",
-            startTraces : 20,
-            redraw: function () {
-                reinit();
-            },
-            standard: {
-                background: "#0D4D2B",
-                traceColor: "#bcbec0",
-                traceFill: "#385050"
-            },
-            green2: {
-                background: "#0d4d2b",
-                traceColor: "#bcbec0",
-                traceFill: "#385050"
-            },
-            blackwhite: {
-                background: "#fff",
-                traceColor: "#bcbec0",
-                traceFill: "#385050"
-            },
-            blue: {
-                background: "#011880",
-                traceColor: "#bcbec0",
-                traceFill: "#385050"
-            },
-            colorScheme: 0
-        };
+        centerX = Math.round(( width / 2 ) / settings.step ) * settings.step,
+        centerY = Math.round(( height / 2 ) / settings.step ) * settings.step
     
 
     canvas.width = width;
     canvas.height = height;
     document.body.appendChild(canvas);
-
-    var grid = {
-        cells: [],
-        _scale: 0,
-        _width: 0,
-        create: function(width, height, scale){
-            this._width = (width/scale) - 1;
-            this.scale = scale;
-            this.cells = new Array( Math.ceil( height/scale * width/scale ) );
-        },
-        toScale( value ){
-            return Math.round( value / this.scale );
-        },
-        getCell: function(x, y, mark){
-            var cellIndex = this.toScale(x) + this.toScale(y) * this._width;
-            if( mark !== undefined && this.cells[ cellIndex ] ) this.cells[ cellIndex ] = "!";
-            return this.cells[ cellIndex ];
-        },
-        setCell: function(x, y, value){
-            var cellIndex = this.toScale(x) + this.toScale(y) * this._width;
-            this.cells[ cellIndex ] = value;
-            return this.cells[ cellIndex ];
-        },
-        checkVector: function( startX, startY, endX, endY ){
-            startX = startX / this.scale;
-            startY = startY / this.scale;
-            endX = endX / this.scale;
-            endY = endY / this.scale;
-
-            var topPoint = Math.max( startX, endX );
-            var bottomPoint = Math.min( startX, endX );
-            var leftPoint = Math.max( startY, endY );
-            var rightPoint = Math.min( startY, endY );
-
-            var verticalDist = topPoint - bottomPoint;
-            var horizontalDist = leftPoint - rightPoint;
-
-            for (let i = 0; i <= verticalDist; i++) {
-                var y = bottomPoint + i;
-                for (let j = 0; j <= verticalDist; j++) {
-                    var x = leftPoint + j;
-                    var cellIndex = x + y * this._width;
-                    if( this.cells[ cellIndex ] !== undefined ) return true; 
-                }                
-            }
-
-            return false;
-        },
-        console: function(){
-            for (let l = 0; l < this.cells.length; ( l += this._width )) {
-                var y = l / this._width;
-                var line = "";
-                for (let x = 0; x < this._width; x++) {
-                    line += this.getCell( x*this.scale, y*this.scale ) == "#" ? "||" : "..";                    
-                }
-                console.log(line);
-            }
-        }
-    };
-    grid.create(width, height, 8);
-    window.grid = grid;
-
-    function Trace(settings) {
-        settings = settings || {};
-        this.id = settings.id || "trace" + Math.floor( Math.random() * 10000 );
-        this.x = settings.x || Math.ceil((Math.random() * width) / 8) * 8;
-        this.y = settings.y || Math.ceil((Math.random() * height) / 8) * 8;
-
-        this.points = [];
-        this.addPoint({
-            x: this.x,
-            y: this.y,
-            arc: 0
-        });
-
-        this.trapCount = 0;
-        this.live = true;
-
-        this.lastPoint = this.points[0];
-
-        this.angle = settings.angle != undefined ? settings.angle : (Math.ceil((Math.random() * 360) / 45) * 45) * (Math.PI / 180);
-        this.speed = 8;
-        this.life = 0;
-        this.changeDelay = 0;
-    };
-    Trace.prototype.checkNextPoint = function(ang){
-        var angle = this.angle + ( ang || 0 ),
-            velX = Math.sign( Math.round( Math.sin(angle) * 10 ) / 10 ) * this.speed,
-            velY = Math.sign( Math.round( Math.cos(angle) * 10 ) / 10 ) * this.speed,
-            checkPointNearX = this.x + velX,
-            checkPointNearY = this.y + velY,
-            checkPointFarX = this.x + velX * 2,
-            checkPointFarY = this.y + velY * 2;
-
-        // check if its in bounds.
-        if (checkPointFarX > 0 && checkPointFarX < width && checkPointFarY > 0 && checkPointFarY < height) {
-            var deg = Math.round( this.angle * 180 / Math.PI ) % 360;
-            deg = deg < 0 ? deg + 360 : deg ;
-
-            if( deg === 225 && ( grid.getCell( this.x + velX, this.y, true ) || grid.getCell( this.x, this.y + velY, true ) ) ) return false;
-            if( deg ===  45 && ( grid.getCell( this.x + velX, this.y, true ) || grid.getCell( this.x, this.y + velY, true ) ) ) return false;
-            if( deg === 135 && ( grid.getCell( this.x + velX, this.y, true ) || grid.getCell( this.x, this.y + velY, true ) ) ) return false;
-            if( deg === 315 && ( grid.getCell( this.x + velX, this.y, true ) || grid.getCell( this.x, this.y + velY, true ) ) ) return false;
-            if( grid.getCell( checkPointNearX, checkPointNearY, true ) !== undefined ){
-                return false;
-            }
-        } else {
-            return false;
-        }
-        return {
-            x: checkPointNearX,
-            y: checkPointNearY,
-            ang: this.angle
-        };
-    };
-    Trace.prototype.update = function () {
-        if( !this.live ) return;
-
-        var x = this.lastPoint.x,
-            y = this.lastPoint.y,
-            dx = this.x - x,
-            dy = this.y - y;
-
-        this.life += 1;
-
-        //force curve
-        if( this.changeDelay > 2 && Math.random() < 0.1 ){
-            this.changeDelay = 0;            
-            var direction =  Math.random() > .5 ? 1 : -1 ;
-            this.angle += 45 * (Math.PI / 180) * direction; 
-            grid.setCell( this.x, this.y, ";" );
-            this.life += 1;
-        }
-        var nextPoint = this.checkNextPoint();
-        var initDeg = this.angle;
-
-        if( !nextPoint ){
-            this.life += 1;
-            //grid.setCell( this.x, this.y, "?" );
-            this.angle = initDeg + 45 * (Math.PI / 180);
-            nextPoint = this.checkNextPoint()
-            if( !nextPoint ){ 
-                this.angle = initDeg - 45 * (Math.PI / 180);
-                nextPoint = this.checkNextPoint()
-            }
-            if( !nextPoint ){ 
-                this.angle = initDeg + 90 * (Math.PI / 180);
-                nextPoint = this.checkNextPoint()
-            }
-            if( !nextPoint ){ 
-                this.angle = initDeg - 90 * (Math.PI / 180);
-                nextPoint = this.checkNextPoint()
-            }
-            if( !nextPoint ){ 
-                this.angle = initDeg + 135 * (Math.PI / 180);
-                nextPoint = this.checkNextPoint()
-            }
-            if( !nextPoint ){ 
-                this.angle = initDeg - 135 * (Math.PI / 180);
-                nextPoint = this.checkNextPoint()
-            }
-            if( !nextPoint ) this.live = false;
-        }
-
-
-        // no collision keep moving
-        if (this.live && Math.random() > this.life / 1000 ) {
-            this.changeDelay++;
-            this.x = nextPoint.x;
-            this.y = nextPoint.y;
-            this.addPoint({
-                x: this.x,
-                y: this.y
-            });
-            grid.setCell( this.x, this.y, "#" );
-        }else{
-            this.addPoint({
-                x: this.x,
-                y: this.y
-            });
-            this.lastPoint = this.points[this.points.length - 1];
-            this.live = false;
-        }
-
-    };
-    Trace.prototype.addPoint = function(point){
-        grid.setCell(point.x, point.y, "#");
-        this.points.push(point);
-    };
-    Trace.prototype.render = function () {
-        if(this.stroke) {
-            ctx.save();
-            ctx.strokeStyle = this.stroke;
-        }
-
-        ctx.beginPath();
-        ctx.moveTo(this.points[0].x, this.points[0].y);
-
-        for (var p = 1, plen = this.points.length; p < plen; p++) {
-            ctx.lineTo(this.points[p].x, this.points[p].y);
-        }
-        ctx.lineTo(this.x, this.y);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(this.points[0].x+.5, this.points[0].y+.5, 4, 0, Math.PI * 2);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-
-        if (!this.live) {
-            ctx.beginPath();
-            ctx.arc(this.points[plen - 1].x+.5, this.points[plen - 1].y+.5, 4, 0, Math.PI * 2);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-        }
-        if(this.stroke) ctx.restore();
-    };
+    grid.create(width, height, settings.step);
 
     // init
     var traces = [],
         traceNum = settings.startTraces,
         reqAnimFrameInstance = null;
 
-    function reinit() {
+    function reinit(e) {
         cancelAnimationFrame(reqAnimFrameInstance);
         //settings.startTraces += 2;
         //InitCircle.radius += 2;
-        grid.create(width, height, 8);
+        grid.create(width, height, settings.step);
         traces = [];
         traceNum = settings.startTraces;
         ctx.clearRect(0, 0, width, height);
 
-        InitCircle.init();
+        console.log(e)
 
-        /*
-        for (var b = 0; b < traceNum; b++) {
-            traces.push(new Trace({
-                cX: 0,
-                cY: 0
-            }));
-        }*/
+        traces = initter.init({
+            traceNum: traceNum, 
+            width: width, 
+            height: height,
+            centerX: Math.round(( e.clientX ) / settings.step ) * settings.step,
+            centerY: Math.round(( e.clientY ) / settings.step ) * settings.step,
+            step: settings.step
+        });
+
         doTrace();
     };
 
-    ctx.strokeStyle = "#bcbec0";
+    ctx.strokeStyle = "#698a8a";
     ctx.fillStyle = "#385050";
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 3;
 
-    var InitCircle = {
-        x: 0,
-        y: 0,
-        radius: 40,
-        step: 8,
-        init: function(){
-            this.x = Math.round(( width / 2 ) / 8 ) * 8;
-            this.y = Math.round(( height / 2 ) / 8 ) * 8;
-
-            var outterRadius = this.radius + 10;
-            var incAng = 360 * (Math.PI / 180) / traceNum;
-            for (var b = 0; b < traceNum; b++) {
-                var bolinhaAng = incAng * b;
-                var vectorAng = Math.round(( bolinhaAng ) / ( Math.PI / 4 ) ) * ( Math.PI / 4 );
-
-                traces.push(new Trace({
-                    x: Math.round( ( this.x + ( Math.sin( bolinhaAng ) * outterRadius ) ) / 8 ) * 8,
-                    y: Math.round( ( this.y + ( Math.cos( bolinhaAng ) * outterRadius ) ) / 8 ) * 8,
-                    angle: ( vectorAng )
-                }));
-            }
-            this.addToGrid();
-        },
-        addToGrid: function(){
-            var radius = this.radius + this.step * 2;
-            var bX = this.x - radius;
-            var bY = this.y - radius;
-            for (var i = 0; i < radius * 2; ( i += this.step )) {
-                for (var j = 0; j < radius * 2; ( j += this.step )) {
-                    var vert = i - radius;
-                    var horz = j - radius;
-                    var dist = Math.sqrt( vert * vert + horz * horz );
-                    if( dist < radius ) grid.setCell( bX + j, bY + i, "#" );                    
-                }
-            }
-        },
-        draw: function(){
-        ctx.beginPath();
-           /*  ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();*/
-        }
-    }
-    InitCircle.init();
+    var initter = window[ "init" + settings.initForm ] || window.initCircle;
+    traces = initter.init({
+        traceNum: traceNum, 
+        width: width, 
+        height: height,
+        centerX: centerX,
+        centerY: centerY,
+        step: settings.step
+    });
 
     function doGrid() {
         ctx.save();
@@ -377,30 +97,33 @@ var createCircuit = function(){
         ctx.fillStyle = "#ccc";
         ctx.lineWidth = 1;
 
-        for( var x = 0; x < width; x += 8 ){
-            for( var y = 0; y < height; y += 8 ){
-                switch( grid.getCell( x, y ) ){
-                    case "#":
-                        ctx.strokeStyle = "#ffe99b";
-                        ctx.fillStyle = "#ccc";
-                    break;
-                    case "!":                    
-                        ctx.strokeStyle = "#ff0000";
-                        ctx.fillStyle = "#ff0000";
-                    break;
-                    case "?":                    
-                        ctx.strokeStyle = "#0000ff";
-                        ctx.fillStyle = "#0000ff";
-                    break;
-                    case ";":                    
-                        ctx.strokeStyle = "#ff00ff";
-                        ctx.fillStyle = "#ff00ff";
-                    break;
-                    default:
-                        ctx.strokeStyle = "#ffe99b";
-                        ctx.fillStyle = "#ccc";
+        for( var x = 0; x < width; x += settings.step ){
+            for( var y = 0; y < height; y += settings.step ){
+                var code = grid.getCell( x, y );
+                if( isNaN( code ) ){
+                    switch(code){
+                        case "#":
+                            ctx.strokeStyle = "#ffe99b";
+                            ctx.fillStyle = "#ccc";
+                        break;
+                        case "!":                    
+                            ctx.strokeStyle = "#ff0000";
+                            ctx.fillStyle = "#ff0000";
+                        break;
+                        case "?":                    
+                            ctx.strokeStyle = "#0000ff";
+                            ctx.fillStyle = "#0000ff";
+                        break;
+                        case ";":                    
+                            ctx.strokeStyle = "#ff00ff";
+                            ctx.fillStyle = "#ff00ff";
+                        break;
+                        default:
+                            ctx.strokeStyle = "#ffe99b";
+                            ctx.fillStyle = "#ccc";
+                    }
+                    ctx.fillRect(x-.5,y-.5,1,1);
                 }
-                ctx.fillRect(x-.5,y-.5,1,1);
 
             }
         }
@@ -409,11 +132,11 @@ var createCircuit = function(){
 
     function doTrace() {
         ctx.clearRect(0, 0, width, height);
-        InitCircle.draw();
+        initter.draw(ctx);
         doGrid();
 
         for (var b = 0; b < traces.length; b++) {
-            traces[b].render();
+            traces[b].render(ctx);
         }
 
         for (b = 0; b < traces.length; b++) {
@@ -426,9 +149,37 @@ var createCircuit = function(){
         reqAnimFrameInstance = requestAnimationFrame(doTrace);
     }
 
-    canvas.addEventListener("click", function(){ reinit() })
+    canvas.addEventListener("click", function(e){ reinit(e) })
 
     doTrace();
 };
 
-createCircuit();
+createCircuit({
+    background: "#0D4D2B",
+    traceColor: "#233535",
+    traceFill: "#233535",
+    startTraces : 64,
+    initForm: "Circle",
+    step: 16,
+    standard: {
+        background: "#0D4D2B",
+        traceColor: "#bcbec0",
+        traceFill: "#385050"
+    },
+    green2: {
+        background: "#0d4d2b",
+        traceColor: "#bcbec0",
+        traceFill: "#385050"
+    },
+    blackwhite: {
+        background: "#fff",
+        traceColor: "#bcbec0",
+        traceFill: "#385050"
+    },
+    blue: {
+        background: "#011880",
+        traceColor: "#bcbec0",
+        traceFill: "#385050"
+    },
+    colorScheme: 0
+});
