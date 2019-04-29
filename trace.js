@@ -184,31 +184,38 @@ Trace.prototype.render = function (ctx) {
 
     ctx.beginPath();
     ctx.moveTo(this.points[0].x, this.points[0].y);
+    ctx.arc(this.points[0].x, this.points[0].y, 2, 0, Math.PI * 2);
 
     var glowRadius = 50 * ( 1 - this.dieCount / this.dieTime ) + 1;
     var grd = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, glowRadius);
     grd.addColorStop(0, "white");
     grd.addColorStop(1, strokeColor);
 
+
+    ctx.moveTo(this.points[0].x, this.points[0].y);
+
     for (var p = 1, plen = this.points.length; p < plen; p++) {
         ctx.lineTo(this.points[p].x, this.points[p].y);
     }
     ctx.lineTo(this.x, this.y);
     ctx.strokeStyle = grd;
-    ctx.stroke();
+    //ctx.shadowBlur = 2;
+    //ctx.shadowColor = "black";
+    //ctx.shadowOffsetX = 1;
+    //ctx.shadowOffsetY = 1;
+    //ctx.shadowBlur = 3;
+    //ctx.shadowOpacity = .25;
 
-    ctx.beginPath();
-    ctx.arc(this.points[0].x, this.points[0].y, 2, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+    //ctx.beginPath();
+    //ctx.closePath();
 
     if (this.state !== "live") {
-        ctx.beginPath();
+        
+        ctx.moveTo(this.points[plen - 1].x, this.points[plen - 1].y);
         ctx.arc(this.points[plen - 1].x, this.points[plen - 1].y, 2, 0, Math.PI * 2);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
     }
+    //ctx.closePath();
+    //ctx.fill();
+    ctx.stroke();
     if(this.stroke) ctx.restore();
 };

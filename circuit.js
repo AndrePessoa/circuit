@@ -94,6 +94,7 @@ var createCircuit = function(settings){
         ctx.strokeStyle = "#ffe99b";
         ctx.fillStyle = "#ccc";
         ctx.lineWidth = 1;
+        ctx.globalAlpha = .5;
 
         for( var x = 0; x < width; x += settings.step ){
             for( var y = 0; y < height; y += settings.step ){

@@ -78,10 +78,9 @@ var initCircle = {
             var destY = Math.cos( this.vectors[v].ang ) * 100 + this.vectors[v].y;
             ctx.moveTo(this.vectors[v].x, this.vectors[v].y);
             ctx.lineTo(destX, destY);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
         }
+        ctx.fill();
+        ctx.stroke();
         ctx.restore();
     }
 }
