@@ -12,18 +12,26 @@ var initCircle = {
         this.y = opts.centerY;
         this.step = opts.step;
 
+        var radius = this.radius;
+
         var incAng = 360 * (Math.PI / 180) / opts.traceNum;
         for (var b = 0; b < opts.traceNum; b++) {
-            var outterRadius = this.radius + this.radiusSpread * Math.random() + this.step;
+
+            var outterRadius = radius + this.radiusSpread * Math.random() + this.step;
             var bolinhaAng = incAng * b;
             var vectorAng = Math.round(( bolinhaAng ) / ( Math.PI / 4 ) ) * ( Math.PI / 4 );
             var x = Math.round( ( this.x + ( Math.sin( bolinhaAng ) * outterRadius ) ) / this.step ) * this.step;
             var y = Math.round( ( this.y + ( Math.cos( bolinhaAng ) * outterRadius ) ) / this.step ) * this.step;
 
+            if( grid.checkCell( x, y ) ){
+                //b--;
+                continue;
+            }
+
             //var x = Math.round(Math.random() * width);
             //var y = Math.round(Math.random() * height);
 
-            this.vectors.push({x: x, y:y, ang: vectorAng});
+            this.vectors.push({x: x, y:y, ang: bolinhaAng});
 
             if( x > 0 && x < opts.width &&
                 y > 0 && y < opts.height
@@ -60,6 +68,7 @@ var initCircle = {
 
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius + this.step * 2, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, this.radius + this.step * 8, 0, Math.PI * 2);
         ctx.stroke();
         ctx.closePath();
 

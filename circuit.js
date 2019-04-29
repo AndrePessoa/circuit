@@ -63,8 +63,6 @@ var createCircuit = function(settings){
         traceNum = settings.startTraces;
         ctx.clearRect(0, 0, width, height);
 
-        console.log(e)
-
         traces = initter.init({
             traceNum: traceNum, 
             width: width, 
@@ -136,11 +134,12 @@ var createCircuit = function(settings){
         doGrid();
 
         for (var b = 0; b < traces.length; b++) {
+            traces[b].stroke = "#698a8a";
             traces[b].render(ctx);
         }
 
         for (b = 0; b < traces.length; b++) {
-            if (traces[b].live) {
+            if (traces[b].state !== "die") {
                 traces[b].update();
             }
         }
@@ -158,9 +157,9 @@ createCircuit({
     background: "#0D4D2B",
     traceColor: "#233535",
     traceFill: "#233535",
-    startTraces : 64,
+    startTraces : 48,
     initForm: "Circle",
-    step: 16,
+    step: 10,
     standard: {
         background: "#0D4D2B",
         traceColor: "#bcbec0",

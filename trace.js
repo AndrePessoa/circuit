@@ -7,6 +7,10 @@ function Trace(settings, grid) {
     this.grid = grid;
     this.trapCount = 0;
     this.live = true;
+    this.state = "live";
+
+    this.dieCount = 0;
+    this.dieTime = 20;
 
     this.angle = settings.angle != undefined ? settings.angle : (Math.ceil((Math.random() * 360) / 45) * 45) * (Math.PI / 180);
     this.speed = settings.step;
@@ -52,7 +56,7 @@ Trace.prototype.checkNextPoint = function(ang){
         checkPointFarY = this.y + velY * 2;
 
     // check if its in bounds.
-    if (checkPointFarX > 0 && checkPointFarX < this.grid.width && checkPointFarY > 0 && checkPointFarY < this.grid.height) {
+    if (checkPointNearX > 0 && checkPointNearX < this.grid.width && checkPointNearY > 0 && checkPointNearY < this.grid.height) {
         var deg = this.roundAngle().deg;
 
         var cross = this.roundAngle( this.toRad( deg + 90 )).rad;
@@ -79,7 +83,11 @@ Trace.prototype.checkNextPoint = function(ang){
     };
 };
 Trace.prototype.update = function () {
-    if( !this.live ) return;
+    if( this.state === "died" ) return;
+    if( this.state === "dying" ){
+        this.dieCount = this.dieCount < this.dieTime ? this.dieCount + 1 : this.dieTime;
+        if( this.dieCount === this.dieTime ) this.state = "died";
+    }
 
     var x = this.lastPoint.x,
         y = this.lastPoint.y,
@@ -149,6 +157,7 @@ Trace.prototype.update = function () {
         });
         this.lastPoint = this.points[this.points.length - 1];
         this.live = false;
+        this.state = "dying";
     }
 
 };
@@ -167,6 +176,7 @@ Trace.prototype.addPoint = function(point){
     }
 };
 Trace.prototype.render = function (ctx) {
+    var strokeColor = this.stroke || "white";
     if(this.stroke) {
         ctx.save();
         ctx.strokeStyle = this.stroke;
@@ -175,10 +185,16 @@ Trace.prototype.render = function (ctx) {
     ctx.beginPath();
     ctx.moveTo(this.points[0].x, this.points[0].y);
 
+    var glowRadius = 50 * ( 1 - this.dieCount / this.dieTime ) + 1;
+    var grd = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, glowRadius);
+    grd.addColorStop(0, "white");
+    grd.addColorStop(1, strokeColor);
+
     for (var p = 1, plen = this.points.length; p < plen; p++) {
         ctx.lineTo(this.points[p].x, this.points[p].y);
     }
     ctx.lineTo(this.x, this.y);
+    ctx.strokeStyle = grd;
     ctx.stroke();
 
     ctx.beginPath();
@@ -187,7 +203,7 @@ Trace.prototype.render = function (ctx) {
     ctx.fill();
     ctx.stroke();
 
-    if (!this.live) {
+    if (this.state !== "live") {
         ctx.beginPath();
         ctx.arc(this.points[plen - 1].x, this.points[plen - 1].y, 2, 0, Math.PI * 2);
         ctx.closePath();
