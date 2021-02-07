@@ -1,9 +1,6 @@
 var initCircle = {
-    x: 0,
-    y: 0,
-    radius: 40,
-    radiusSpread: 40,
-    step: 8,
+    radius: 20,
+    radiusSpread: 20,
     vectors: [],
     init: function(opts){
         var traces = [];
@@ -11,6 +8,7 @@ var initCircle = {
         this.x = opts.centerX;
         this.y = opts.centerY;
         this.step = opts.step;
+        this.ctx = opts.ctx;
 
         var radius = this.radius;
 
@@ -39,7 +37,7 @@ var initCircle = {
                 traces.push(new Trace({
                     x: x,
                     y: y,
-                    angle: ( vectorAng ),
+                    angle: ( bolinhaAng ),
                     step: opts.step
                 }, grid));
             }
@@ -60,26 +58,29 @@ var initCircle = {
             }
         }
     },
-    draw: function(ctx){
+    draw: function(){
+        var circles = [.15, .65, 1.25, 2, 4, 8];
+        var ctx = this.ctx;
+
         ctx.save();
         ctx.strokeStyle = "#ddd";
         ctx.fillStyle = "#ccc";
         ctx.lineWidth = .1;    
 
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius + this.step * 2, 0, Math.PI * 2);
-        ctx.arc(this.x, this.y, this.radius + this.step * 8, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.closePath();
+
+        circles.forEach((rad) => {
+            ctx.moveTo(this.x + this.radius + this.step * rad, this.y);
+            ctx.arc(this.x, this.y, this.radius + this.step * rad, 0, Math.PI * 2);
+        });
 
         for (var v = 0, plen = this.vectors.length; v < plen; v++) {
-            ctx.beginPath();
             var destX = Math.sin( this.vectors[v].ang ) * 100 + this.vectors[v].x;
             var destY = Math.cos( this.vectors[v].ang ) * 100 + this.vectors[v].y;
             ctx.moveTo(this.vectors[v].x, this.vectors[v].y);
             ctx.lineTo(destX, destY);
         }
-        ctx.fill();
+
         ctx.stroke();
         ctx.restore();
     }

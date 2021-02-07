@@ -12,10 +12,12 @@ function Trace(settings, grid) {
     this.dieCount = 0;
     this.dieTime = 20;
 
-    this.angle = settings.angle != undefined ? settings.angle : (Math.ceil((Math.random() * 360) / 45) * 45) * (Math.PI / 180);
+    this.originalAngle = settings.angle != undefined ? settings.angle : (Math.random() * 360) * (Math.PI / 180);
+    this.initAngle = this.degToIndexDeg(this.originalAngle);
+    this.angle = this.degToIndexDeg(this.originalAngle);
     this.speed = settings.step;
     this.life = 0;
-    this.lifeLimite = 1000;
+    this.lifeLimite = 100000;
     this.changeDelay = 0;
 
     this.points = [];
@@ -28,6 +30,12 @@ function Trace(settings, grid) {
     this.lastPoint = this.points[0];
 
 };
+Trace.getLivePerc = function(){
+    return this.live / this.lifeLimite;
+};
+Trace.prototype.degToIndexDeg = function(deg){
+   return Math.round(( deg ) / ( Math.PI / 4 ) ) * ( Math.PI / 4 );
+}
 Trace.prototype.toRad = function(deg){
     return deg * (Math.PI / 180)
 }
@@ -68,6 +76,7 @@ Trace.prototype.checkNextPoint = function(ang){
         if( this.grid.checkCell( checkPointNearX, checkPointNearY ) ){
             return false;
         }
+        // check impact
         if( deg === 225 && ( this.grid.checkCell( this.x + velX, this.y, blockedAngs) || this.grid.checkCell( this.x, this.y + velY, blockedAngs ) ) ) return false;
         if( deg ===  45 && ( this.grid.checkCell( this.x + velX, this.y, blockedAngs) || this.grid.checkCell( this.x, this.y + velY, blockedAngs ) ) ) return false;
         if( deg === 135 && ( this.grid.checkCell( this.x + velX, this.y, blockedAngs) || this.grid.checkCell( this.x, this.y + velY, blockedAngs ) ) ) return false;
@@ -97,9 +106,12 @@ Trace.prototype.update = function () {
     this.life += 1;
 
     //force curve
-    if( this.changeDelay > 2 && Math.random() < 0.1 ){
+    var needReturnAngle = this.angle - this.initAngle;
+    var needChangeAngle = Math.random() < 0.3;
+    var shouldChangeAngle = this.changeDelay > 2 && (needReturnAngle !== 0 || needChangeAngle);
+    if( shouldChangeAngle ){
         this.changeDelay = 0;            
-        var direction =  Math.random() > .5 ? 1 : -1 ;
+        var direction =  needReturnAngle < 0 ? 1 : -1 ;
         this.angle += 45 * (Math.PI / 180) * direction; 
         //this.grid.setCell( this.x, this.y, ";" );
         this.life += 10;
@@ -132,8 +144,11 @@ Trace.prototype.update = function () {
             this.angle = initDeg - 135 * (Math.PI / 180);
             nextPoint = this.checkNextPoint()
         }
-        if( !nextPoint ) this.live = false;
-        this.life += 10;
+        if( !nextPoint ) {
+            this.live = false;
+        } else {
+            this.life += 10;
+        }
     }
 
     this.angle = this.roundAngle().rad;
@@ -149,7 +164,7 @@ Trace.prototype.update = function () {
             angle: this.angle
         });
         //this.grid.setCell( this.x, this.y, "#" );
-    }else{
+    }else if(this.state !== "died"){
         this.addPoint({
             x: this.x,
             y: this.y,
@@ -186,10 +201,12 @@ Trace.prototype.render = function (ctx) {
     ctx.moveTo(this.points[0].x, this.points[0].y);
     ctx.arc(this.points[0].x, this.points[0].y, 2, 0, Math.PI * 2);
 
-    var glowRadius = 50 * ( 1 - this.dieCount / this.dieTime ) + 1;
-    var grd = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, glowRadius);
-    grd.addColorStop(0, "white");
-    grd.addColorStop(1, strokeColor);
+    if(this.state !== "died"){
+        var glowRadius = 50 * ( 1 - this.dieCount / this.dieTime ) + 1;
+        var grd = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, glowRadius);
+        grd.addColorStop(0, "white");
+        grd.addColorStop(1, strokeColor);
+    }
 
 
     ctx.moveTo(this.points[0].x, this.points[0].y);
@@ -199,23 +216,12 @@ Trace.prototype.render = function (ctx) {
     }
     ctx.lineTo(this.x, this.y);
     ctx.strokeStyle = grd;
-    //ctx.shadowBlur = 2;
-    //ctx.shadowColor = "black";
-    //ctx.shadowOffsetX = 1;
-    //ctx.shadowOffsetY = 1;
-    //ctx.shadowBlur = 3;
-    //ctx.shadowOpacity = .25;
-
-    //ctx.beginPath();
-    //ctx.closePath();
 
     if (this.state !== "live") {
-        
         ctx.moveTo(this.points[plen - 1].x, this.points[plen - 1].y);
         ctx.arc(this.points[plen - 1].x, this.points[plen - 1].y, 2, 0, Math.PI * 2);
     }
-    //ctx.closePath();
-    //ctx.fill();
+
     ctx.stroke();
     if(this.stroke) ctx.restore();
 };
