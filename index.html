@@ -6,6 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Entreoutros - circuit</title>
 
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css" rel="stylesheet" />
     <style type="text/css">
         body {
             background-color: rgb(56, 80, 80);
@@ -18,23 +19,36 @@
             transform: translate(-50%, -50%);
             border: 2px solid #888;
             box-shadow: 5px 5px rgb(0 0 0 / 40%), 5px 5px 20px 10px rgb(0 0 0 / 10%);
+            height: 210px;
+            width: 250px;
         }
         canvas {
+            position: absolute;
+            cursor: pointer;
             transform-origin: center center;
             display: block;
-            box-shadow: 8px 8px 3px rgb(0 0 0 / 25%);
-            background: #545454;
-            transform: rotate(45deg) scale(1);
+            transform: perspective(1000px) rotateX(45deg) rotateZ(45deg) scale(1);
             transition: all .2s;
         }
-        canvas:active {
-            transform: rotate(45deg) scale(0.98);
+        canvas#canvas-traces{
+            background: linear-gradient(315deg,#bfbfbf2e 0, #6161616e 20%, #464646d1 100%);
+            box-shadow: 10px 10px 0px -1px rgb(0 0 0 / 35%), 8px 8px 4px -5px rgb(0 0 0 / 35%);
+            top: -50px;
+        }
+        canvas#canvas-traces:active {
+            transform: perspective(1000px) rotateX(45deg) rotateZ(45deg) scale(0.99);
+            top: -40px;
+            box-shadow: 0 0 0px -1px rgb(0 0 0 / 0%), 0px 0px 4px -5px rgb(0 0 0 / 0%);
             transition: all .05s;
+        }
+        canvas#canvas-grid{
+            background: #545454;
+            top: -40px;
+            box-shadow: 6px 6px 4px -1px rgb(0 0 0 / 45%), 9px 9px 3px rgb(0 0 0 / 25%);
         }
     </style>
 </head>
 <body>
-    
     <script src="./polyfill.js" ></script>
     <script src="./initVectors.js" ></script>
     <script src="./trace.js" ></script>

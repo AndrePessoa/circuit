@@ -75,8 +75,8 @@ var initCircle = {
         });
 
         for (var v = 0, plen = this.vectors.length; v < plen; v++) {
-            var destX = Math.sin( this.vectors[v].ang ) * 100 + this.vectors[v].x;
-            var destY = Math.cos( this.vectors[v].ang ) * 100 + this.vectors[v].y;
+            var destX = Math.sin( this.vectors[v].ang ) * 300 + this.vectors[v].x;
+            var destY = Math.cos( this.vectors[v].ang ) * 300 + this.vectors[v].y;
             ctx.moveTo(this.vectors[v].x, this.vectors[v].y);
             ctx.lineTo(destX, destY);
         }

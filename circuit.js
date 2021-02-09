@@ -6,18 +6,27 @@ var createCircuit = function(settings){
 
     // setup stuff.
     var wrapper = document.createElement("div"),
-        canvas = document.createElement("canvas"),
-        ctx = canvas.getContext("2d"),
+        canvasTraces = document.createElement("canvas"),
+        ctxTraces = canvasTraces.getContext("2d"),
+        canvasGrid = document.createElement("canvas"),
+        ctxGrid = canvasGrid.getContext("2d"),
         width = 250,
         height = 250,
         centerX = Math.round(( width / 2 ) / settings.step ) * settings.step,
         centerY = Math.round(( height / 2 ) / settings.step ) * settings.step
     
     wrapper.id = 'circuit-canvas';
-    wrapper.appendChild(canvas);
 
-    canvas.width = width;
-    canvas.height = height;
+    wrapper.appendChild(canvasGrid);
+    canvasGrid.width = width;
+    canvasGrid.height = height;
+    canvasGrid.id = 'canvas-grid';
+
+    wrapper.appendChild(canvasTraces);
+    canvasTraces.width = width;
+    canvasTraces.height = height;
+    canvasTraces.id = 'canvas-traces';
+
     document.body.appendChild(wrapper);
     grid.create(width, height, settings.step);
 
@@ -33,7 +42,7 @@ var createCircuit = function(settings){
         grid.create(width, height, settings.step);
         traces = [];
         traceNum = settings.startTraces;
-        ctx.clearRect(0, 0, width, height);
+        ctxTraces.clearRect(0, 0, width, height);
 
         var factorX = 0.2 + Math.random() * 0.6;
         var factorY = 0.2 + Math.random() * 0.6;
@@ -42,7 +51,7 @@ var createCircuit = function(settings){
         centerY = Math.round(( height * factorY ) / settings.step ) * settings.step;
 
         traces = initter.init({
-            ctx: ctx,
+            ctx: ctxTraces,
             traceNum: traceNum, 
             width: width, 
             height: height,
@@ -57,7 +66,7 @@ var createCircuit = function(settings){
 
     var initter = window[ "init" + settings.initForm ] || window.initCircle;
     traces = initter.init({
-        ctx: ctx,
+        ctx: ctxTraces,
         traceNum: traceNum, 
         width: width, 
         height: height,
@@ -67,56 +76,36 @@ var createCircuit = function(settings){
     });
 
     function drawGrid() {
-        ctx.save();
-        ctx.strokeStyle = "#ffe99b";
-        ctx.fillStyle = "#ccc";
-        ctx.lineWidth = 1;
-        ctx.globalAlpha = .5;
+        ctxGrid.clearRect(0, 0, width, height);
+        ctxGrid.fillStyle = "#ccc";
+        ctxGrid.lineWidth = 1;
+        ctxGrid.globalAlpha = .5;
 
         for( var x = 0; x < width; x += settings.step ){
             for( var y = 0; y < height; y += settings.step ){
-                var code = grid.getCell( x, y );
-                if( isNaN( code ) ){
-                    switch(code){
-                        case "#":
-                            ctx.strokeStyle = "#ffe99b";
-                            ctx.fillStyle = "#ccc";
-                        break;
-                        case "!":                    
-                            ctx.strokeStyle = "#ff0000";
-                            ctx.fillStyle = "#ff0000";
-                        break;
-                        case "?":                    
-                            ctx.strokeStyle = "#0000ff";
-                            ctx.fillStyle = "#0000ff";
-                        break;
-                        case ";":                    
-                            ctx.strokeStyle = "#ff00ff";
-                            ctx.fillStyle = "#ff00ff";
-                        break;
-                        default:
-                            ctx.strokeStyle = "#ffe99b";
-                            ctx.fillStyle = "#ccc";
-                    }
-                    ctx.fillRect(x-.5,y-.5,1,1);
-                }
-
+                ctxGrid.strokeStyle = "#ffe99b";
+                ctxGrid.fillStyle = "#fff";
+                ctxGrid.fillRect(x-.5,y-.5,1,1);
             }
         }
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = "#ddd";
-        ctx.strokeRect(3, 3, width - 6, height - 6);
-        ctx.restore();
+        ctxGrid.lineWidth = 3;
+        ctxGrid.strokeStyle = "#ddd";
+        ctxGrid.strokeRect(1.5, 1.5, width - 3, height - 3);
     }
 
     function drawTrace() {
-        ctx.strokeStyle = "#698a8a";
-        ctx.fillStyle = "#385050";
-        ctx.lineWidth = 2.5;
+        ctxTraces.globalAlpha = 1;
+        ctxTraces.lineWidth = 3;
+        ctxTraces.strokeStyle = "ddd";
+        ctxTraces.strokeRect(1.5, 1.5, width - 3, height - 3);
+
+        ctxTraces.strokeStyle = "#698a8a";
+        ctxTraces.fillStyle = "#385050";
+        ctxTraces.lineWidth = 2.5;
+        ctxTraces.lineCap = 'round';
 
         for (var b = 0; b < traces.length; b++) {
-            traces[b].stroke = "#698a8a";
-            traces[b].render(ctx);
+            traces[b].render(ctxTraces);
         }
 
         for (b = 0; b < traces.length; b++) {
@@ -125,9 +114,8 @@ var createCircuit = function(settings){
     }
 
     function draw () {
-        ctx.clearRect(0, 0, width, height);
+        ctxTraces.clearRect(0, 0, width, height);
         initter.draw();
-        drawGrid();
         drawTrace();
     }
 
@@ -149,8 +137,9 @@ var createCircuit = function(settings){
         
     }
 
-    canvas.addEventListener("click", function(e){ reinit(e) });
-    canvas.addEventListener("mousedown", function(e){ state = 'paused' });
+    canvasTraces.addEventListener("click", function(e){ reinit(e) });
+    canvasTraces.addEventListener("mousedown", function(e){ state = 'paused' });
 
     tick();
+    drawGrid();
 };

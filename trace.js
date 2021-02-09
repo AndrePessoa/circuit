@@ -104,11 +104,13 @@ Trace.prototype.update = function () {
         dy = this.y - y;
 
     this.life += 1;
+    if(this.life < 2) return;
 
     //force curve
+    var isYoung = this.life < 200;
     var needReturnAngle = this.angle - this.initAngle;
-    var needChangeAngle = Math.random() < 0.3;
-    var shouldChangeAngle = this.changeDelay > 2 && (needReturnAngle !== 0 || needChangeAngle);
+    var needChangeAngle = Math.random() < 0.2;
+    var shouldChangeAngle = isYoung && this.changeDelay > 2 && (needReturnAngle !== 0 || needChangeAngle);
     if( shouldChangeAngle ){
         this.changeDelay = 0;            
         var direction =  needReturnAngle < 0 ? 1 : -1 ;
@@ -191,15 +193,11 @@ Trace.prototype.addPoint = function(point){
     }
 };
 Trace.prototype.render = function (ctx) {
-    var strokeColor = this.stroke || "white";
-    if(this.stroke) {
-        ctx.save();
-        ctx.strokeStyle = this.stroke;
-    }
+    ctx.globalAlpha = this.life < 10 ? this.life / 10 : 1;
 
-    ctx.beginPath();
-    ctx.moveTo(this.points[0].x, this.points[0].y);
-    ctx.arc(this.points[0].x, this.points[0].y, 2, 0, Math.PI * 2);
+    var strokeColor = "#698a8a";
+    ctx.save();
+    ctx.strokeStyle = this.stroke;
 
     if(this.state !== "died"){
         var glowRadius = 50 * ( 1 - this.dieCount / this.dieTime ) + 1;
@@ -207,15 +205,19 @@ Trace.prototype.render = function (ctx) {
         grd.addColorStop(0, "white");
         grd.addColorStop(1, strokeColor);
     }
+    ctx.strokeStyle = grd;
 
+    ctx.beginPath();
+    ctx.moveTo(this.points[0].x, this.points[0].y);
+    ctx.arc(this.points[0].x, this.points[0].y, 2, 0, Math.PI * 2);
 
     ctx.moveTo(this.points[0].x, this.points[0].y);
-
     for (var p = 1, plen = this.points.length; p < plen; p++) {
         ctx.lineTo(this.points[p].x, this.points[p].y);
     }
+
     ctx.lineTo(this.x, this.y);
-    ctx.strokeStyle = grd;
+    ctx.stroke();
 
     if (this.state !== "live") {
         ctx.moveTo(this.points[plen - 1].x, this.points[plen - 1].y);
@@ -223,5 +225,5 @@ Trace.prototype.render = function (ctx) {
     }
 
     ctx.stroke();
-    if(this.stroke) ctx.restore();
+    ctx.restore();
 };
